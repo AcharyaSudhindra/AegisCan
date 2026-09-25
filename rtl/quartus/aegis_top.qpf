@@ -1,0 +1,5 @@
+QUARTUS_VERSION = "13.0"
+DATE = "09:40:00  September 24, 2026"
+
+# Revisions
+PROJECT_REVISION = "aegis_top"

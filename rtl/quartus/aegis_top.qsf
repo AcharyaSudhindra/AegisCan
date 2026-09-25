@@ -1,0 +1,61 @@
+# -------------------------------------------------------------------------- #
+# Quartus II Settings File (.qsf) for Aegis-CPS Tier 1 Silicon Sentry
+# Target Device: Altera DE2 Board (Cyclone II EP2C35F672C6)
+# -------------------------------------------------------------------------- #
+
+set_global_assignment -name FAMILY "Cyclone II"
+set_global_assignment -name DEVICE EP2C35F672C6
+set_global_assignment -name TOP_LEVEL_ENTITY aegis_top
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION "13.0 SP1"
+set_global_assignment -name LAST_QUARTUS_VERSION "13.0 SP1"
+
+# Design Files
+set_global_assignment -name VERILOG_FILE ../src/aegis_top.v
+set_global_assignment -name VERILOG_FILE ../src/can_btl.v
+set_global_assignment -name VERILOG_FILE ../src/can_destuffer.v
+set_global_assignment -name VERILOG_FILE ../src/can_id_deserializer.v
+set_global_assignment -name VERILOG_FILE ../src/bram_whitelist.v
+set_global_assignment -name VERILOG_FILE ../src/kill_wire_ctrl.v
+set_global_assignment -name VERILOG_FILE ../src/violation_capture.v
+set_global_assignment -name VERILOG_FILE ../src/spi_dma_tx.v
+set_global_assignment -name SDC_FILE aegis_top.sdc
+
+# -------------------------------------------------------------------------- #
+# Pin Assignments (Altera DE2 Board - EP2C35F672C6)
+# -------------------------------------------------------------------------- #
+
+# Clock (50 MHz) and Reset (KEY0)
+set_location_assignment PIN_N2 -to clk
+set_location_assignment PIN_G26 -to rst_n
+
+# On-board Diagnostic LEDs (Mapped to Green LEDs LEDG0, LEDG1, LEDG2)
+set_location_assignment PIN_AE22 -to led_kill_active
+set_location_assignment PIN_AF22 -to led_bus_idle
+set_location_assignment PIN_W19 -to led_heartbeat
+
+# -------------------------------------------------------------------------- #
+# GPIO_0 Expansion Header (For CAN Transceiver & ESP32-S3)
+# -------------------------------------------------------------------------- #
+# CAN Transceiver Interface (SN65HVD230 / Level-Shifted TJA1050)
+set_location_assignment PIN_D25 -to can_rx
+set_location_assignment PIN_J22 -to can_tx
+
+# SPI Interface to ESP32-S3
+set_location_assignment PIN_E26 -to spi_clk
+set_location_assignment PIN_E25 -to spi_mosi
+set_location_assignment PIN_F24 -to spi_cs_n
+set_location_assignment PIN_F23 -to irq_out
+
+# Set Default I/O Standard to 3.3-V LVTTL
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
+
+# Optimize for Speed & Determinism
+set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS ON
+set_global_assignment -name OPTIMIZE_HOLD_TIMING "ALL PATHS"
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
