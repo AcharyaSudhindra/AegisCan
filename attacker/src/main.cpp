@@ -40,159 +40,193 @@ const char index_html[] PROGMEM = R"rawliteral(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aegis Penetration Suite</title>
+    <title>Aegis Penetration Suite v2.0</title>
     <style>
         :root { 
-            --bg: #09090b; 
-            --panel: #18181b; 
-            --border: #27272a; 
-            --text: #e4e4e7; 
-            --accent: #3b82f6; 
-            --danger: #ef4444; 
-            --success: #10b981;
-            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+            --bg: #f3f4f6; 
+            --panel: #ffffff; 
+            --border: #e5e7eb; 
+            --text: #1f2937; 
+            --text-muted: #6b7280;
+            --danger: #dc2626; 
+            --warn: #ea580c;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --mono: 'Courier New', Courier, monospace; 
+            --sans: system-ui, -apple-system, sans-serif;
         }
         body { 
             margin: 0; background: var(--bg); color: var(--text); 
-            font-family: system-ui, -apple-system, sans-serif; 
-            -webkit-font-smoothing: antialiased; 
+            font-family: var(--sans); 
+            overflow-x: hidden;
         }
         .header { 
-            padding: 1.2rem 2rem; border-bottom: 1px solid var(--border); 
+            padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); 
             display: flex; justify-content: space-between; align-items: center; 
-            background: #000; 
+            background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .header h1 { 
-            margin: 0; font-size: 1.1rem; font-weight: 600; letter-spacing: 1.5px; 
-            text-transform: uppercase; color: #fff;
+            margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; 
+            color: #111827; text-transform: uppercase;
         }
         .live-badge { 
-            display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--success); font-weight: 500;
+            display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--success);
+            font-size: 0.9rem;
         }
         .dot { 
-            width: 8px; height: 8px; background: var(--success); border-radius: 50%; 
+            width: 10px; height: 10px; background: var(--success); border-radius: 50%; 
             animation: pulse 2s infinite; 
         }
-        @keyframes pulse { 
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 
-            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } 
-        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        
         .container { 
-            max-width: 1400px; margin: 2rem auto; padding: 0 1rem; 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; 
+            max-width: 1500px; margin: 2rem auto; padding: 0 1.5rem; 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
         }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
         
         .card { 
             background: var(--panel); border: 1px solid var(--border); 
-            border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden;
         }
         .card-header { 
             padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); 
-            background: rgba(255,255,255,0.02); font-weight: 600; font-size: 0.9rem;
-            color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px;
+            background: #f9fafb; font-weight: 700; font-size: 0.95rem;
+            color: #4b5563; text-transform: uppercase; letter-spacing: 1px;
         }
         .card-body { padding: 1.5rem; }
         
         .payload-row { 
             display: flex; justify-content: space-between; align-items: center; 
-            padding: 1.2rem; border: 1px solid var(--border); border-radius: 6px; 
-            margin-bottom: 1rem; background: #000; transition: border-color 0.2s;
+            padding: 1.2rem; border: 1px solid var(--border); border-radius: 6px;
+            margin-bottom: 1rem; background: #ffffff; transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .payload-row:hover { border-color: #3f3f46; }
+        .payload-row:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(37,99,235,0.08); }
         
-        .payload-info h3 { margin: 0 0 6px 0; font-size: 1rem; color: #fff; }
+        .payload-info h3 { margin: 0 0 6px 0; font-size: 1.1rem; color: #111827; }
         .payload-info code { 
-            font-family: var(--mono); font-size: 0.85rem; color: #71717a; 
-            display: block; margin-top: 4px;
+            color: var(--text-muted); font-family: var(--mono); font-size: 0.85rem; 
+            display: block; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; 
+            width: fit-content; margin-top: 6px;
         }
-        
-        .tag { 
-            display: inline-block; padding: 2px 6px; border-radius: 4px; 
-            font-size: 0.7rem; font-weight: bold; margin-left: 8px; font-family: var(--mono);
-        }
-        .tag-id { background: #27272a; color: #e4e4e7; }
         
         .btn { 
-            background: var(--border); color: var(--text); border: none; 
-            padding: 0.6rem 1.2rem; border-radius: 4px; font-weight: 500; 
-            cursor: pointer; transition: all 0.2s; font-size: 0.85rem;
+            background: #ffffff; color: var(--danger); border: 1px solid var(--danger); 
+            padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; 
+            transition: all 0.2s; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px;
         }
-        .btn:hover { background: #3f3f46; }
-        .btn-danger { 
-            background: rgba(239, 68, 68, 0.1); color: var(--danger); 
-            border: 1px solid rgba(239, 68, 68, 0.2); 
-        }
-        .btn-danger:hover { background: var(--danger); color: #fff; }
+        .btn:hover { background: var(--danger); color: #ffffff; }
         
-        .terminal { 
-            background: #000; padding: 1.5rem; height: 400px; overflow-y: auto; 
-            font-family: var(--mono); font-size: 0.85rem; line-height: 1.6; 
+        .btn-safe { color: var(--primary); border-color: var(--primary); }
+        .btn-safe:hover { background: var(--primary); color: #ffffff; }
+        .btn-warn { color: var(--warn); border-color: var(--warn); }
+        .btn-warn:hover { background: var(--warn); color: #ffffff; }
+        
+        /* Target Visualization */
+        .target-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;
         }
-        .log-entry { margin-bottom: 4px; display: flex; }
-        .log-time { color: #52525b; margin-right: 0.75rem; user-select: none; }
-        .log-msg { color: #a1a1aa; }
-        .log-info { color: var(--accent); }
-        .log-warn { color: var(--danger); font-weight: bold; }
-        .log-success { color: var(--success); }
+        .ecu-node {
+            border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem 1rem; 
+            text-align: center; background: #ffffff; transition: all 0.3s;
+        }
+        .ecu-node.hacked {
+            border-color: var(--danger); background: #fef2f2; color: var(--danger);
+            animation: shake 0.4s; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+        }
+        .ecu-node.blocked {
+            border-color: var(--primary); background: #eff6ff; color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-4px);} 75% {transform: translateX(4px);} }
+        
+        /* Terminal */
+        .terminal-container { padding: 1rem; background: #1e1e24; border-radius: 6px; }
+        .terminal { 
+            height: 300px; overflow-y: auto; font-family: var(--mono); font-size: 0.85rem;
+        }
+        .log-entry { margin-bottom: 6px; display: flex; animation: slideIn 0.2s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .log-time { color: #6b7280; margin-right: 1rem; }
+        .log-msg { color: #d1d5db; }
+        .log-info { color: #60a5fa; }
+        .log-warn { color: #ef4444; font-weight: bold; }
+        .log-success { color: #10b981; }
+        .log-shield { color: #3b82f6; font-weight: bold; }
     </style>
 </head>
 <body>
-
     <div class="header">
         <h1>Aegis Penetration Suite</h1>
-        <div class="live-badge"><div class="dot"></div> LINK ACTIVE</div>
+        <div class="live-badge"><div class="dot"></div> CAN BUS LINK ESTABLISHED</div>
     </div>
     
     <div class="container">
-        <!-- Exploit Configuration -->
+        <!-- Payload Delivery -->
         <div class="card">
-            <div class="card-header">Payload Delivery</div>
+            <div class="card-header">Exploit Vectors</div>
             <div class="card-body">
                 
                 <div class="payload-row">
                     <div class="payload-info">
-                        <h3>Critical Brake Override <span class="tag tag-id">ID: 0x100</span></h3>
-                        <code>DLC: 8 | DATA: FF A5 01 00 00 00 00 00</code>
+                        <h3>[0x100] Critical Brake Override</h3>
+                        <code>PAYLOAD: FF A5 01 00 00 00 00 00</code>
                     </div>
-                    <button class="btn btn-danger" onclick="inject('brake')">Inject Payload</button>
+                    <button class="btn" onclick="inject('brake', 'ecu-brakes')">Inject Malware</button>
                 </div>
                 
                 <div class="payload-row">
                     <div class="payload-info">
-                        <h3>Denial of Service (Flood) <span class="tag tag-id">ID: 0x010</span></h3>
-                        <code>High Priority Dominant Bits (20 Frames)</code>
+                        <h3>[0x001] Steering Actuator Hijack</h3>
+                        <code>PAYLOAD: EE EE EE EE EE EE EE EE</code>
                     </div>
-                    <button class="btn btn-danger" onclick="inject('flood')">Execute DoS</button>
+                    <button class="btn" onclick="inject('hijack', 'ecu-steer')">Inject Malware</button>
                 </div>
                 
                 <div class="payload-row">
                     <div class="payload-info">
-                        <h3>Steering Actuator Hijack <span class="tag tag-id">ID: 0x001</span></h3>
-                        <code>DLC: 8 | DATA: EE EE EE EE EE EE EE EE</code>
+                        <h3>[0x010] Denial of Service (Flood)</h3>
+                        <code>VECTOR: High-Priority Dominant Bits</code>
                     </div>
-                    <button class="btn btn-danger" onclick="inject('hijack')">Inject Payload</button>
+                    <button class="btn btn-warn" onclick="inject('flood', 'ecu-net')">Execute DoS</button>
                 </div>
 
-                <div class="payload-row" style="margin-top: 2rem;">
+                <div class="payload-row" style="margin-top: 2rem; background: #f9fafb;">
                     <div class="payload-info">
-                        <h3>Background Telemetry <span class="tag tag-id">ID: 0x123</span></h3>
-                        <code>Simulated Engine RPM & Speed traffic</code>
+                        <h3>[0x123] Background Telemetry</h3>
+                        <code>STATUS: Simulating Engine/Speed Traffic</code>
                     </div>
-                    <button class="btn" id="btnToggle" onclick="inject('toggle')">Pause Traffic</button>
+                    <button class="btn btn-safe" id="btnToggle" onclick="inject('toggle', null)">Pause Traffic</button>
                 </div>
-
             </div>
         </div>
         
-        <!-- Forensics Terminal -->
+        <!-- Live Forensics -->
         <div class="card">
-            <div class="card-header">Target Output Log</div>
-            <div class="terminal" id="terminal">
-                <div class="log-entry">
-                    <span class="log-time">00:00:00.000</span>
-                    <span class="log-msg log-success">System initialized. Connected to CAN bus at 500kbps.</span>
+            <div class="card-header">Target System Status</div>
+            <div class="card-body">
+                <div class="target-grid">
+                    <div id="ecu-brakes" class="ecu-node">
+                        <div style="font-size: 1.8rem; margin-bottom: 8px;">🛑</div>
+                        <strong>ABS ECU</strong><br><small style="color: var(--text-muted);">ONLINE</small>
+                    </div>
+                    <div id="ecu-steer" class="ecu-node">
+                        <div style="font-size: 1.8rem; margin-bottom: 8px;">☸️</div>
+                        <strong>STEER ECU</strong><br><small style="color: var(--text-muted);">ONLINE</small>
+                    </div>
+                    <div id="ecu-net" class="ecu-node">
+                        <div style="font-size: 1.8rem; margin-bottom: 8px;">🌐</div>
+                        <strong>CAN GATEWAY</strong><br><small style="color: var(--text-muted);">ONLINE</small>
+                    </div>
+                </div>
+                
+                <div class="terminal-container">
+                    <div class="terminal" id="terminal">
+                        <div class="log-entry">
+                            <span class="log-time">00:00:00.000</span>
+                            <span class="log-msg log-success">SYSTEM INITIALIZED. CONNECTED TO BUS AT 500KBPS.</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -213,6 +247,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             if(type === 'info') classStr += ' log-info';
             if(type === 'warn') classStr += ' log-warn';
             if(type === 'success') classStr += ' log-success';
+            if(type === 'shield') classStr += ' log-shield';
 
             const entry = document.createElement('div');
             entry.className = 'log-entry';
@@ -222,24 +257,45 @@ const char index_html[] PROGMEM = R"rawliteral(
             term.scrollTop = term.scrollHeight;
         }
 
-        async function inject(type) {
-            if(type !== 'toggle') addLog(`Injecting ${type} payload onto bus...`, 'info');
+        function setEcuStatus(ecuId, state) {
+            if(!ecuId) return;
+            const node = document.getElementById(ecuId);
+            node.className = 'ecu-node'; // reset
+            if(state === 'hacked') {
+                node.classList.add('hacked');
+                node.innerHTML = node.innerHTML.replace('ONLINE', 'COMPROMISED').replace('SECURE', 'COMPROMISED');
+            } else if(state === 'blocked') {
+                node.classList.add('blocked');
+                node.innerHTML = node.innerHTML.replace('COMPROMISED', 'SECURE').replace('ONLINE', 'SECURE');
+                setTimeout(() => {
+                    node.className = 'ecu-node';
+                    node.innerHTML = node.innerHTML.replace('SECURE', 'ONLINE');
+                }, 3000);
+            }
+        }
+
+        async function inject(type, targetEcu) {
+            if(type !== 'toggle') {
+                addLog(`[TX] INJECTING MALICIOUS PAYLOAD: ${type.toUpperCase()}`, 'info');
+                if(targetEcu) setEcuStatus(targetEcu, 'hacked');
+            }
             
             try {
                 const res = await fetch(`/api/attack?type=${type}`);
                 const text = await res.text();
                 
                 if (text.includes("HARDWARE INTERCEPT")) {
-                    addLog(`ERR_ACK: Payload destroyed. Target firewall enforced mitigation.`, 'warn');
+                    addLog(`[!] ERR_ACK: PAYLOAD DESTROYED. HARDWARE FIREWALL ENFORCED MITIGATION!`, 'shield');
+                    if(targetEcu) setEcuStatus(targetEcu, 'blocked');
                 } else if (text.includes("TOGGLED")) {
                     isTelemetryActive = !isTelemetryActive;
                     document.getElementById('btnToggle').innerText = isTelemetryActive ? "Pause Traffic" : "Resume Traffic";
-                    addLog(`Telemetry stream ${isTelemetryActive ? 'resumed' : 'paused'}.`);
+                    addLog(`[SYS] TELEMETRY STREAM ${isTelemetryActive ? 'RESUMED' : 'PAUSED'}.`);
                 } else {
-                    addLog(`SYS_ACK: Payload successfully transmitted on bus.`, 'success');
+                    addLog(`[OK] SYS_ACK: PAYLOAD SUCCESSFULLY TRANSMITTED ON BUS.`, 'warn');
                 }
             } catch (e) {
-                addLog(`ERR_CONN: Unable to communicate with injector node.`, 'warn');
+                addLog(`[X] ERR_CONN: UNABLE TO COMMUNICATE WITH INJECTOR NODE.`, 'warn');
             }
         }
     </script>
