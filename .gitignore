@@ -1,0 +1,36 @@
+# Documentation reports
+/Aegis_CAN_Master_Project_Report.md
+/Aegis_CAN_Technical_Specification.md
+/Aegis_CPS_Final_Project_Statement.md
+/Nirmaan2026_PPT_Content.md
+/Nirmaan2026_PPT_Slides2to6_FINAL.md
+/Nirmaan_Aegis_CAN_Project_Statement.md
+
+# Simulation waveform dumps and compiled binaries (exceeds GitHub limit)
+*.vcd
+*.vvp
+*.wlf
+*.vstf
+transcript
+work/
+
+# Quartus compilation and intermediate files
+db/
+incremental_db/
+output_files/
+*.rpt
+*.summary
+*.done
+*.jdi
+*.pin
+*.qws
+*.smsg
+
+# PlatformIO and IDE build folders
+.pio/
+.vscode/
+driver_fix/
+*.zip
+*.cat
+sim_out.txt
+esp/dependencies.lock
