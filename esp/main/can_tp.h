@@ -1,0 +1,25 @@
+#ifndef CAN_TP_H
+#define CAN_TP_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef enum {
+    CANTP_SINGLE_FRAME = 0,
+    CANTP_FIRST_FRAME = 1,
+    CANTP_CONSECUTIVE_FRAME = 2,
+    CANTP_FLOW_CONTROL = 3
+} cantp_frame_type_t;
+
+typedef struct {
+    uint8_t  data[4096];
+    uint16_t total_len;
+    uint16_t received_len;
+    uint8_t  seq_num;
+    bool     active;
+} cantp_reassembly_t;
+
+void task_can_tp(void *pvParameters);
+void cantp_send_response(const uint8_t *data, uint16_t len);
+
+#endif // CAN_TP_H

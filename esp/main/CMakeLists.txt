@@ -1,0 +1,26 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "spi_dma_listener.c"
+        "can_tp.c"
+        "uds_server.c"
+        "aes_gcm_engine.c"
+        "flight_recorder.c"
+        "mqtt_telematics.c"
+        "tinyml_anomaly.c"
+        "web_dashboard.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        driver
+        spi_flash
+        esp_wifi
+        esp_event
+        nvs_flash
+        mqtt
+        mbedtls
+        littlefs
+        esp_psram
+        esp_timer
+        esp_http_server
+)
