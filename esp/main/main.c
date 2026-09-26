@@ -40,8 +40,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t* dis = (wifi_event_sta_disconnected_t*) event_data;
-        ESP_LOGW(TAG, "Hotspot dropped (reason code=%d), retrying in 2s...", dis->reason);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        ESP_LOGW(TAG, "Hotspot dropped (reason code=%d), reconnecting...", dis->reason);
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
@@ -130,7 +129,8 @@ void app_main(void) {
     ESP_ERROR_CHECK(ret);
 
     // 2. Initialize LittleFS Flight Recorder partition
-    flight_recorder_init();
+    if (flight_recorder_init() != ESP_OK)
+        ESP_LOGE(TAG, "Flight recorder unavailable; logging disabled");
 
     // 3. Initialize TinyML anomaly engine (allocates sliding windows in PSRAM)
     tinyml_anomaly_init();
@@ -165,19 +165,20 @@ void app_main(void) {
     }
 
     // 6. Create Tasks
+    ESP_ERROR_CHECK(violation_queue && violation_queue_ws && encrypted_queue &&
+                    telemetry_queue && can_rx_queue ? ESP_OK : ESP_ERR_NO_MEM);
     ESP_LOGI(TAG, "Spawning tasks...");
 
     // Core 0: Real-time IO tasks
-    xTaskCreatePinnedToCore(task_spi_dma_listener, "spi_dma", STACK_SPI_DMA_LISTENER, NULL, PRIO_SPI_DMA_LISTENER, NULL, 0);
-    xTaskCreatePinnedToCore(task_can_tp, "can_tp", STACK_CAN_TP, NULL, PRIO_CAN_TP, NULL, 0);
-    xTaskCreatePinnedToCore(task_uds_server, "uds", STACK_UDS_SERVER, NULL, PRIO_UDS_SERVER, NULL, 0);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_spi_dma_listener, "spi_dma", STACK_SPI_DMA_LISTENER, NULL, PRIO_SPI_DMA_LISTENER, NULL, 0) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_can_tp, "can_tp", STACK_CAN_TP, NULL, PRIO_CAN_TP, NULL, 0) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
 
     // Core 1: Compute & Telematics tasks
-    xTaskCreatePinnedToCore(task_aes_gcm_engine, "aes_gcm", STACK_AES_GCM_ENGINE, NULL, PRIO_AES_GCM_ENGINE, NULL, 1);
-    xTaskCreatePinnedToCore(task_flight_recorder, "flight_rec", STACK_FLIGHT_RECORDER, NULL, PRIO_FLIGHT_RECORDER, NULL, 1);
-    xTaskCreatePinnedToCore(task_web_dashboard, "web_dash", STACK_WEB_DASHBOARD, NULL, PRIO_WEB_DASHBOARD, NULL, 1);
-    xTaskCreatePinnedToCore(task_mqtt_telematics, "mqtt_tel", STACK_MQTT_TELEMATICS, NULL, PRIO_MQTT_TELEMATICS, NULL, 1);
-    xTaskCreatePinnedToCore(task_tinyml_anomaly, "tinyml", STACK_TINYML_ANOMALY, NULL, PRIO_TINYML_ANOMALY, NULL, 1);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_aes_gcm_engine, "aes_gcm", STACK_AES_GCM_ENGINE, NULL, PRIO_AES_GCM_ENGINE, NULL, 1) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_flight_recorder, "flight_rec", STACK_FLIGHT_RECORDER, NULL, PRIO_FLIGHT_RECORDER, NULL, 1) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_web_dashboard, "web_dash", STACK_WEB_DASHBOARD, NULL, PRIO_WEB_DASHBOARD, NULL, 1) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_mqtt_telematics, "mqtt_tel", STACK_MQTT_TELEMATICS, NULL, PRIO_MQTT_TELEMATICS, NULL, 1) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_ERROR_CHECK(xTaskCreatePinnedToCore(task_tinyml_anomaly, "tinyml", STACK_TINYML_ANOMALY, NULL, PRIO_TINYML_ANOMALY, NULL, 1) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
 
     ESP_LOGI(TAG, "All tasks created. Aegis-CAN Gateway is live.");
 }

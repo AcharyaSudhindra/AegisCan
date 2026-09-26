@@ -33,7 +33,8 @@
 #define FLIGHT_LOG_RECORD_SIZE 128
 
 // MQTT Telematics
-#define MQTT_BROKER_URI      "mqtts://broker.aegis-cps.local:8883"
+#define MQTT_BROKER_URI      ""
+#define MQTT_BROKER_CA_PEM   NULL // Configure a trusted CA before enabling MQTT.
 #define MQTT_TOPIC_VIOLATION "aegis/violations"
 #define MQTT_TOPIC_HEARTBEAT "aegis/heartbeat"
 
@@ -72,8 +73,6 @@
 #define PRIO_MQTT_TELEMATICS    4
 #define PRIO_TINYML_ANOMALY     3
 
-#endif // APP_CONFIG_H
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 extern QueueHandle_t violation_queue;
@@ -81,3 +80,4 @@ extern QueueHandle_t violation_queue_ws;
 extern QueueHandle_t encrypted_queue;
 extern QueueHandle_t telemetry_queue;
 extern QueueHandle_t can_rx_queue;
+#endif // APP_CONFIG_H

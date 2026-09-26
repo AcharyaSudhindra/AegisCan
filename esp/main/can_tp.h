@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "esp_err.h"
 
 typedef enum {
     CANTP_SINGLE_FRAME = 0,
@@ -11,15 +12,8 @@ typedef enum {
     CANTP_FLOW_CONTROL = 3
 } cantp_frame_type_t;
 
-typedef struct {
-    uint8_t  data[4096];
-    uint16_t total_len;
-    uint16_t received_len;
-    uint8_t  seq_num;
-    bool     active;
-} cantp_reassembly_t;
-
 void task_can_tp(void *pvParameters);
-void cantp_send_response(const uint8_t *data, uint16_t len);
+esp_err_t cantp_send_response(const uint8_t *data, uint16_t len);
+bool can_tp_ready(void);
 
 #endif // CAN_TP_H

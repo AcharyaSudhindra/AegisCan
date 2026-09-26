@@ -10,6 +10,7 @@ typedef struct {
     uint32_t arb_id;          // CAN Arbitration ID
     uint8_t  data[8];         // CAN data payload (up to 8 bytes)
     uint8_t  dlc;             // Data Length Code
+    bool     is_extended;
     int64_t  timestamp_us;    // ESP32 microsecond timestamp
 } can_frame_entry_t;
 

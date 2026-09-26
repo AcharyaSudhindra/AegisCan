@@ -16,7 +16,6 @@
 #define UDS_NRC_EXCEEDED_ATTEMPTS             0x36
 #define UDS_NRC_REQUIRED_TIME_DELAY           0x37
 
-void task_uds_server(void *pvParameters);
 void uds_process_request(const uint8_t *data, uint16_t len);
 
 #endif // UDS_SERVER_H

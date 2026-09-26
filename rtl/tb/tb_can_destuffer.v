@@ -53,6 +53,9 @@ module tb_can_destuffer;
         sof_detected = 0;
         #80;
         
+        // can_btl emits the SOF sample after its edge notification.
+        feed_bit(0);
+
         // Send 5 ones
         feed_bit(1); feed_bit(1); feed_bit(1); feed_bit(1); feed_bit(1);
         

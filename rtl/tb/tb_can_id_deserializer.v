@@ -44,6 +44,8 @@ module tb_can_id_deserializer;
     endtask
 
     integer i;
+    integer valid_count = 0;
+    always @(posedge clk) if (rst_n && id_valid) valid_count = valid_count + 1;
 
     initial begin
         $dumpfile("can_id_deserializer.vcd");
@@ -75,10 +77,10 @@ module tb_can_id_deserializer;
         send_bit(0);
 
         #100;
-        if (id_valid && arb_id == 29'h00000123 && !is_extended) begin
+        if (valid_count == 1 && arb_id == 29'h00000123 && !is_extended) begin
             $display("PASS: Test Case 1");
         end else begin
-            $display("FAIL: Test Case 1. ID=%h, is_extended=%b, id_valid=%b", arb_id, is_extended, id_valid);
+            $fatal(1, "Test Case 1: ID=%h, extended=%b, pulses=%0d", arb_id, is_extended, valid_count);
         end
 
         #2000;
@@ -110,10 +112,10 @@ module tb_can_id_deserializer;
         send_bit(0);
 
         #100;
-        if (id_valid && arb_id == 29'h1ABCDEF0 && is_extended) begin
+        if (valid_count == 2 && arb_id == 29'h1ABCDEF0 && is_extended) begin
             $display("PASS: Test Case 2");
         end else begin
-            $display("FAIL: Test Case 2. ID=%h, is_extended=%b, id_valid=%b", arb_id, is_extended, id_valid);
+            $fatal(1, "Test Case 2: ID=%h, extended=%b, pulses=%0d", arb_id, is_extended, valid_count);
         end
 
         #2000;

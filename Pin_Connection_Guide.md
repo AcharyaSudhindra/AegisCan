@@ -9,6 +9,8 @@ This document contains the final physical wiring connections for the entire Aegi
 
 This node intercepts CAN traffic, filters it through the FPGA hardware, and reports status to the ESP32-S3 WiFi Dashboard.
 
+**Firmware correction:** the connections below provide FPGA/SPI reporting only. The victim ESP's native CAN controller additionally needs a compatible transceiver on GPIO4 (TX) / GPIO5 (RX). Do not tie multiple controller TX outputs together. See [victim corrections and bench requirements](esp/CORRECTIONS.md) before changing the circuit. GPIO9 IRQ is not currently used by the firmware to trigger alerts.
+
 ### 1. FPGA (Altera DE2 JP1 Header) ➔ ESP32 & Level Shifter #1
 *All connections are on the bottom-most pins of the `JP1` Expansion Header (closest to the RS232 port).*
 

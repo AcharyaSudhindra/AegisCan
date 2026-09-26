@@ -9,9 +9,10 @@
 #include "esp_timer.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdatomic.h>
 
 static const char *TAG = "MQTT";
-static bool is_connected = false;
+static atomic_bool is_connected = false;
 static esp_mqtt_client_handle_t client = NULL;
 
 bool mqtt_is_connected(void) {
@@ -19,7 +20,6 @@ bool mqtt_is_connected(void) {
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
-    esp_mqtt_event_handle_t event = event_data;
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
@@ -44,13 +44,24 @@ void task_mqtt_telematics(void *pvParameters) {
     ESP_LOGI(TAG, "Starting MQTT telematics task on core %d", xPortGetCoreID());
 
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtts://broker.aegis-cps.local:8883",
-        .broker.verification.skip_cert_common_name_check = true, // Hackathon prototype
+        .broker.address.uri = MQTT_BROKER_URI,
+        .broker.verification.certificate = MQTT_BROKER_CA_PEM,
     };
 
+    if (MQTT_BROKER_URI[0] == '\0' || MQTT_BROKER_CA_PEM == NULL) {
+        ESP_LOGW(TAG, "MQTT disabled: configure broker and trusted CA");
+        char discarded[128];
+        while (1) xQueueReceive(telemetry_queue, discarded, portMAX_DELAY);
+    }
     client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    esp_mqtt_client_start(client);
+    if (!client) { vTaskDelete(NULL); return; }
+    esp_err_t ret = esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    if (ret == ESP_OK) ret = esp_mqtt_client_start(client);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "MQTT startup failed: %s", esp_err_to_name(ret));
+        esp_mqtt_client_destroy(client); client = NULL;
+        vTaskDelete(NULL); return;
+    }
 
     char json_buf[128];
     int64_t last_heartbeat = esp_timer_get_time();
@@ -72,7 +83,7 @@ void task_mqtt_telematics(void *pvParameters) {
             if (is_connected) {
                 char hb_buf[128];
                 snprintf(hb_buf, sizeof(hb_buf),
-                         "{\"uptime_s\":%llu,\"violations\":%lu,\"flash_pct\":67.3,\"connected\":true}",
+                         "{\"uptime_s\":%llu,\"logged_records\":%lu,\"connected\":true}",
                          now / 1000000ULL,
                          (unsigned long)flight_recorder_get_count());
                 esp_mqtt_client_publish(client, "aegis/heartbeat", hb_buf, 0, 0, 0);

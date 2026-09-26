@@ -13,6 +13,7 @@
 
 #include "tinyml_anomaly.h"
 #include "app_config.h"
+#include "spi_dma_listener.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,6 +40,7 @@ static const char *TAG = "TINYML";
 
 typedef struct {
     uint32_t arb_id;
+    bool is_extended;
     bool active;
     can_frame_entry_t window[TINYML_INPUT_WINDOW];
     uint8_t window_idx;
@@ -49,6 +51,7 @@ static sliding_window_t *windows = NULL;
 
 // External queues
 extern QueueHandle_t violation_queue;
+extern QueueHandle_t violation_queue_ws;
 // Assuming a can_rx_queue exists for incoming frames to the anomaly task
 extern QueueHandle_t can_rx_queue; 
 
@@ -66,12 +69,12 @@ void tinyml_anomaly_init(void) {
     ESP_LOGI(TAG, "TinyML Initialization Complete");
 }
 
-static sliding_window_t* get_or_create_window(uint32_t arb_id) {
+static sliding_window_t* get_or_create_window(uint32_t arb_id, bool is_extended) {
     if (windows == NULL) return NULL;
     
     // Search for existing
     for (int i = 0; i < MAX_MONITORED_IDS; i++) {
-        if (windows[i].active && windows[i].arb_id == arb_id) {
+        if (windows[i].active && windows[i].arb_id == arb_id && windows[i].is_extended == is_extended) {
             return &windows[i];
         }
     }
@@ -81,6 +84,7 @@ static sliding_window_t* get_or_create_window(uint32_t arb_id) {
         if (!windows[i].active) {
             windows[i].active = true;
             windows[i].arb_id = arb_id;
+            windows[i].is_extended = is_extended;
             windows[i].window_idx = 0;
             windows[i].window_count = 0;
             return &windows[i];
@@ -127,26 +131,17 @@ static void check_anomalies(sliding_window_t *win) {
         ESP_LOGW(TAG, "Anomaly detected! ID: 0x%lx, Type: %d, Confidence: %.2f", win->arb_id, anomaly_type, confidence);
         
         if (violation_queue != NULL) {
-            uint64_t violation_desc = 0;
-            
-            // 64-bit Violation Descriptor Format:
-            // [63:40] = timestamp[23:0]
-            // [39]    = is_extended
-            // [38:10] = arb_id[28:0]
-            // [9:6]   = error_code[3:0]
-            // [5:0]   = reserved
-            
-            uint32_t ts_24 = (uint32_t)(latest->timestamp_us & 0xFFFFFF);
-            uint32_t is_ext = (win->arb_id > 0x7FF) ? 1 : 0;
-            uint32_t id_29 = win->arb_id & 0x1FFFFFFF;
-            uint8_t err_code = 0x0A; // Using 0x0A as a custom error code for TinyML anomaly
-            
-            violation_desc |= ((uint64_t)ts_24 << 40);
-            violation_desc |= ((uint64_t)is_ext << 39);
-            violation_desc |= ((uint64_t)id_29 << 10);
-            violation_desc |= ((uint64_t)err_code << 6);
-            
-            xQueueSend(violation_queue, &violation_desc, 0);
+            violation_descriptor_t event = {0};
+            event.arb_id = latest->arb_id;
+            event.is_extended = latest->is_extended;
+            event.error_code = 0x0A;
+            event.source = EVENT_SOURCE_RULE;
+            event.esp_timestamp_us = latest->timestamp_us;
+            // No FPGA clock/kill measurement exists for this observation.
+            if (xQueueSend(violation_queue, &event, 0) != pdTRUE)
+                ESP_LOGW(TAG, "Rule event dropped by logging queue");
+            if (violation_queue_ws && xQueueSend(violation_queue_ws, &event, 0) != pdTRUE)
+                ESP_LOGW(TAG, "Rule event dropped by dashboard queue");
         }
     }
 }
@@ -159,7 +154,7 @@ void task_tinyml_anomaly(void *pvParameters) {
     while (1) {
         if (can_rx_queue != NULL) {
             if (xQueueReceive(can_rx_queue, &frame, portMAX_DELAY) == pdTRUE) {
-                sliding_window_t *win = get_or_create_window(frame.arb_id);
+                sliding_window_t *win = get_or_create_window(frame.arb_id, frame.is_extended);
                 if (win) {
                     // Add to sliding window
                     win->window[win->window_idx] = frame;

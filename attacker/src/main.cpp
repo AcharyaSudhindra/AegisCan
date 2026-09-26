@@ -158,7 +158,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <body>
     <div class="header">
         <h1>Aegis Penetration Suite</h1>
-        <div class="live-badge"><div class="dot"></div> CAN BUS LINK ESTABLISHED</div>
+        <div class="live-badge">INJECTOR UI — BUS DELIVERY UNCONFIRMED</div>
     </div>
     
     <div class="container">
@@ -203,20 +203,20 @@ const char index_html[] PROGMEM = R"rawliteral(
         
         <!-- Live Forensics -->
         <div class="card">
-            <div class="card-header">Target System Status</div>
+            <div class="card-header">Transmission Requests — ECU State Not Monitored</div>
             <div class="card-body">
                 <div class="target-grid">
                     <div id="ecu-brakes" class="ecu-node">
                         <div style="font-size: 1.8rem; margin-bottom: 8px;">🛑</div>
-                        <strong>ABS ECU</strong><br><small style="color: var(--text-muted);">ONLINE</small>
+                        <strong>ABS ECU</strong><br><small style="color: var(--text-muted);">UNCONFIRMED</small>
                     </div>
                     <div id="ecu-steer" class="ecu-node">
                         <div style="font-size: 1.8rem; margin-bottom: 8px;">☸️</div>
-                        <strong>STEER ECU</strong><br><small style="color: var(--text-muted);">ONLINE</small>
+                        <strong>STEER ECU</strong><br><small style="color: var(--text-muted);">UNCONFIRMED</small>
                     </div>
                     <div id="ecu-net" class="ecu-node">
                         <div style="font-size: 1.8rem; margin-bottom: 8px;">🌐</div>
-                        <strong>CAN GATEWAY</strong><br><small style="color: var(--text-muted);">ONLINE</small>
+                        <strong>CAN GATEWAY</strong><br><small style="color: var(--text-muted);">UNCONFIRMED</small>
                     </div>
                 </div>
                 
@@ -224,7 +224,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                     <div class="terminal" id="terminal">
                         <div class="log-entry">
                             <span class="log-time">00:00:00.000</span>
-                            <span class="log-msg log-success">SYSTEM INITIALIZED. CONNECTED TO BUS AT 500KBPS.</span>
+                            <span class="log-msg">UI loaded. CAN delivery and FPGA blocking require independent confirmation.</span>
                         </div>
                     </div>
                 </div>
@@ -261,41 +261,33 @@ const char index_html[] PROGMEM = R"rawliteral(
             if(!ecuId) return;
             const node = document.getElementById(ecuId);
             node.className = 'ecu-node'; // reset
-            if(state === 'hacked') {
-                node.classList.add('hacked');
-                node.innerHTML = node.innerHTML.replace('ONLINE', 'COMPROMISED').replace('SECURE', 'COMPROMISED');
-            } else if(state === 'blocked') {
-                node.classList.add('blocked');
-                node.innerHTML = node.innerHTML.replace('COMPROMISED', 'SECURE').replace('ONLINE', 'SECURE');
-                setTimeout(() => {
-                    node.className = 'ecu-node';
-                    node.innerHTML = node.innerHTML.replace('SECURE', 'ONLINE');
-                }, 3000);
-            }
+            node.querySelector('small').textContent = state;
         }
 
         async function inject(type, targetEcu) {
             if(type !== 'toggle') {
                 addLog(`[TX] INJECTING MALICIOUS PAYLOAD: ${type.toUpperCase()}`, 'info');
-                if(targetEcu) setEcuStatus(targetEcu, 'hacked');
+                if(targetEcu) setEcuStatus(targetEcu, 'REQUESTING');
             }
             
             try {
                 const res = await fetch(`/api/attack?type=${type}`);
                 const text = await res.text();
                 
-                if (text.includes("HARDWARE INTERCEPT")) {
-                    addLog(`[!] ERR_ACK: PAYLOAD DESTROYED. HARDWARE FIREWALL ENFORCED MITIGATION!`, 'shield');
-                    if(targetEcu) setEcuStatus(targetEcu, 'blocked');
-                } else if (text.includes("TOGGLED")) {
+                if (!res.ok) {
+                    addLog(`[HTTP ${res.status}] ${text}`, 'warn');
+                    if(targetEcu) setEcuStatus(targetEcu, 'REQUEST FAILED');
+                } else if (text === "TOGGLED") {
                     isTelemetryActive = !isTelemetryActive;
                     document.getElementById('btnToggle').innerText = isTelemetryActive ? "Pause Traffic" : "Resume Traffic";
                     addLog(`[SYS] TELEMETRY STREAM ${isTelemetryActive ? 'RESUMED' : 'PAUSED'}.`);
                 } else {
-                    addLog(`[OK] SYS_ACK: PAYLOAD SUCCESSFULLY TRANSMITTED ON BUS.`, 'warn');
+                    addLog(text, 'info');
+                    if(targetEcu) setEcuStatus(targetEcu, 'DELIVERY UNCONFIRMED');
                 }
             } catch (e) {
                 addLog(`[X] ERR_CONN: UNABLE TO COMMUNICATE WITH INJECTOR NODE.`, 'warn');
+                if(targetEcu) setEcuStatus(targetEcu, 'RESPONSE UNAVAILABLE');
             }
         }
     </script>
@@ -319,27 +311,27 @@ void handleAttack() {
         telemetryActive = !telemetryActive;
         response = "TOGGLED";
     } 
-    else if (type == "brake") {
-        unsigned long tStart = micros();
-        MCP2515::ERROR res = mcp2515.sendMessage(&frameBrake);
-        unsigned long tElapsed = micros() - tStart;
-
-        if (res == MCP2515::ERROR_OK) {
-            response = "SUCCESS";
-        } else {
-            response = "HARDWARE INTERCEPT DETECTED! Destroyed in " + String(tElapsed) + "us";
+    else if (type == "brake" || type == "hijack" || type == "flood") {
+        const can_frame* frame = type == "brake" ? &frameBrake :
+                                 type == "hijack" ? &frameHijack : &frameFlood;
+        unsigned int attempts = type == "flood" ? 20 : 1;
+        unsigned int submitted = 0;
+        int lastError = 0;
+        for (unsigned int i = 0; i < attempts; ++i) {
+            MCP2515::ERROR result = mcp2515.sendMessage(frame);
+            if (result == MCP2515::ERROR_OK) ++submitted;
+            else lastError = static_cast<int>(result);
+            if (type == "flood") delay(2);
         }
-    }
-    else if (type == "flood") {
-        for (int i = 0; i < 20; i++) {
-            mcp2515.sendMessage(&frameFlood);
-            delay(2);
-        }
-        response = "FLOOD_COMPLETE"; 
-    }
-    else if (type == "hijack") {
-        mcp2515.sendMessage(&frameHijack);
-        response = "SUCCESS";
+        // ERROR_OK is a driver submission result, not an ECU receipt or FPGA report.
+        response = "TX requests: " + String(attempts) +
+                   "; driver accepted: " + String(submitted) +
+                   "; driver errors: " + String(attempts - submitted) +
+                   "; last error code: " + String(lastError) +
+                   ". Delivery and FPGA blocking are UNCONFIRMED.";
+    } else {
+        server.send(400, "text/plain", "Unknown payload type");
+        return;
     }
 
     server.send(200, "text/plain", response);

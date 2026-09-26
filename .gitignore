@@ -34,5 +34,3 @@ driver_fix/
 *.cat
 sim_out.txt
 esp/dependencies.lock
-AegisCan upgrade/
-AegisCan_Upgrade_Backup/

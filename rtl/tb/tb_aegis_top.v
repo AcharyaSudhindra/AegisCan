@@ -137,7 +137,7 @@ module tb_aegis_top;
         if (irq_seen == 1'b0)
             $display("[%0t] PASS: Legitimate frame passed — Kill Wire stayed passive.", $time);
         else
-            $display("[%0t] FAIL: Kill Wire fired on legitimate frame!", $time);
+            $fatal(1, "Kill Wire fired on legitimate frame");
 
         // =================================================================
         // PHASE 2: Send an ATTACK frame (ID = 0x1AA, Pre-Blocked in BRAM)
@@ -150,7 +150,7 @@ module tb_aegis_top;
         if (irq_seen == 1'b1)
             $display("[%0t] PASS: IRQ asserted & SPI transfer triggered for ESP32-S3!", $time);
         else
-            $display("[%0t] FAIL: Attack frame was not blocked!", $time);
+            $fatal(1, "Attack frame was not blocked");
 
         // =================================================================
         // PHASE 3: Send another legitimate frame (Bus Recovery Test)
@@ -160,7 +160,7 @@ module tb_aegis_top;
         send_standard_frame(11'h050);
 
         $display("=================================================");
-        $display(" ALL TESTS PASSED! RTL is 100%% Hardware-Ready.");
+        $display(" Legacy smoke test complete; see stuffed-ID regression for coverage.");
         $display("=================================================");
         $finish;
     end

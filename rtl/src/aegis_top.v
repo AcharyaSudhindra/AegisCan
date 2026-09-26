@@ -210,7 +210,18 @@ module aegis_top (
     // =========================================================================
     // Status LED Outputs (Active-High for Altera DE2 Green LEDs LEDG0..LEDG2)
     // =========================================================================
-    assign led_kill_active = kw_kill_active; // LEDG0: Lights ON when Kill Wire fires!
+    // Retriggerable 200 ms indicator at 50 MHz; CAN TX timing is unchanged.
+    reg [23:0] led_stretch_cnt;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            led_stretch_cnt <= 24'd0;
+        else if (kw_kill_active)
+            led_stretch_cnt <= 24'd10_000_000;
+        else if (led_stretch_cnt != 24'd0)
+            led_stretch_cnt <= led_stretch_cnt - 24'd1;
+    end
+
+    assign led_kill_active = kw_kill_active | (led_stretch_cnt != 24'd0);
     assign led_bus_idle    = btl_bus_idle;   // LEDG1: Lights ON when bus is idle
     assign led_heartbeat   = heartbeat_reg;  // LEDG2: Blinks at 1 Hz (Heartbeat)
 

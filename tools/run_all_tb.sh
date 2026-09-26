@@ -67,6 +67,8 @@ run_test "aegis_top" "tb/tb_aegis_top.v" \
     "src/spi_dma_tx.v" \
     "src/aegis_top.v"
 
+run_test "can_attack_regression" "tb/tb_can_attack_regression.v" src/*.v
+
 echo "========================================================"
 echo "    All Testbench Compilations & Runs Completed!        "
 echo "========================================================"

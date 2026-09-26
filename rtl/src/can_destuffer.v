@@ -9,7 +9,7 @@
 //              If 6 consecutive identical bits are detected (no inversion),
 //              a Bit Stuffing Error is signalled.
 //
-// Timing:      Combinational output on same clock cycle as bit_valid pulse.
+// Timing:      Registered output after the clock edge accepting bit_valid.
 // Target:      Altera Cyclone II, 50 MHz system clock, 500 kbps CAN bus.
 // -----------------------------------------------------------------------------
 
@@ -55,10 +55,12 @@ module can_destuffer (
                 in_sof_bit      <= 1'b1; // Skip passing the SOF bit to deserializer
 
             end else if (bit_valid) begin
-                if (in_sof_bit) begin
-                    // Consume the SOF sample point; real ID bits begin on next bit
-                    in_sof_bit <= 1'b0;
-                end else if (consec_count == 3'd5) begin
+                
+                    // can_btl detects SOF at its edge, then emits its sample
+                    // about 80 clocks later. Discard that sample, NOT ID[10].
+                    // SOF has already been counted above for bit stuffing.
+                    
+                if (consec_count == 3'd5) begin
                     // We have seen 5 identical bits. The current bit must be the
                     // inverted stuff bit. Evaluate it:
                     if (sampled_bit == last_bit) begin
