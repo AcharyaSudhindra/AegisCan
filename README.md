@@ -1,6 +1,5 @@
 # Aegis-CAN: Hardware-Enforced Cyber-Physical Firewall
 
-**Nirmaan Hackathon Track 1 Submission**
 
 Aegis-CAN is a dual-chip, hardware-accelerated firewall designed to protect critical Controller Area Network (CAN) infrastructures in vehicular and industrial control systems. It provides robust defense against packet injection, arbitration spoofing, and Denial-of-Service (DoS) attacks.
 
